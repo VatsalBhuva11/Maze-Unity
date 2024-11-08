@@ -355,6 +355,15 @@
 -analyzer:"C:/Program Files/Unity/Hub/Editor/2022.3.43f1/Editor/Data/Tools/Unity.SourceGenerators/Unity.SourceGenerators.dll"
 "Assets/BallMovement.cs"
 "Assets/MoveBall.cs"
+"Assets/StarterAssets/InputSystem/StarterAssetsInputs.cs"
+"Assets/StarterAssets/Mobile/Scripts/CanvasInputs/UICanvasControllerInput.cs"
+"Assets/StarterAssets/Mobile/Scripts/Utilities/MobileDisableAutoSwitchControls.cs"
+"Assets/StarterAssets/Mobile/Scripts/VirtualInputs/UIVirtualButton.cs"
+"Assets/StarterAssets/Mobile/Scripts/VirtualInputs/UIVirtualJoystick.cs"
+"Assets/StarterAssets/Mobile/Scripts/VirtualInputs/UIVirtualTouchZone.cs"
+"Assets/StarterAssets/ThirdPersonController/Scripts/BasicRigidBodyPush.cs"
+"Assets/StarterAssets/ThirdPersonController/Scripts/ThirdPersonController.cs"
+"Assets/StarterAssets/TutorialInfo/Scripts/Readme.cs"
 -langversion:9.0
 /deterministic
 /optimize+
