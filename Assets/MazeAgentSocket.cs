@@ -24,6 +24,7 @@ public class MazeAgentSocket : MonoBehaviour
         GameObject startObject = GameObject.FindGameObjectWithTag("start");
         episodeDone = false;
         Time.timeScale = 0.5f;
+
         if (targetObject != null) target = targetObject.transform;
         else
         {
@@ -88,6 +89,7 @@ public class MazeAgentSocket : MonoBehaviour
             string action = ReceiveDataFromPython();
             if (!string.IsNullOrEmpty(action))
             {
+                Debug.Log("Received action from Python: " + action);
                 if (action == "RESET")
                 {
                     ResetPositions();
@@ -113,10 +115,10 @@ public class MazeAgentSocket : MonoBehaviour
         Vector3 agentRelativePosition = transform.localPosition - origin;
         Vector3 targetRelativePosition = target.localPosition - origin;
 
-        float agentX = Mathf.Round(-agentRelativePosition.z);
-        float agentY = Mathf.Round(-agentRelativePosition.x);
-        float targetX = Mathf.Round(-targetRelativePosition.z);
-        float targetY = Mathf.Round(-targetRelativePosition.x);
+        float agentX = -agentRelativePosition.z;
+        float agentY = -agentRelativePosition.x;
+        float targetX = -targetRelativePosition.z;
+        float targetY = -targetRelativePosition.x;
         float done = episodeDone ? 1 : 0;
 
         return $"{agentX},{agentY},{targetX},{targetY},{done}";
@@ -124,21 +126,38 @@ public class MazeAgentSocket : MonoBehaviour
 
     private void PerformAction(string action)
     {
+        float moveStep = 1.0f; // Movement step size
+        float rotationStep = 90.0f; // Rotation angle in degrees
         Vector3 move = Vector3.zero;
+        Vector3 rotation = Vector3.zero;
 
         switch (action)
         {
-            case "0": break;
-            case "1": move = Vector3.back; break;  // Move forward (negative z-axis)
-            case "2": move = Vector3.forward; break;  // Move backward (positive z-axis)
-            case "3": move = Vector3.left; break;  // Move left (negative x-axis)
-            case "4": move = Vector3.right; break;  // Move right (positive x-axis)
+            case "0": break; // No action
+            case "1":
+                move = new Vector3(0, 0, -moveStep); // Move forward (negative z-axis)
+                rotation = new Vector3(0, -rotationStep, 0); // Rotate left (Y-axis)
+                break;
+            case "2":
+                move = new Vector3(0, 0, moveStep); // Move backward (positive z-axis)
+                rotation = new Vector3(0, rotationStep, 0); // Rotate right (Y-axis)
+                break;
+            case "3":
+                move = new Vector3(-moveStep, 0, 0); // Move left (negative x-axis)
+                rotation = new Vector3(-rotationStep, 0, 0); // Rotate down (X-axis)
+                break;
+            case "4":
+                move = new Vector3(moveStep, 0, 0); // Move right (positive x-axis)
+                rotation = new Vector3(rotationStep, 0, 0); // Rotate up (X-axis)
+                break;
         }
 
+        // Apply movement
         if (move != Vector3.zero)
         {
             Vector3 newPosition = transform.localPosition + move;
-            Debug.Log("New Position: "+ newPosition.x+" "+ newPosition.z);
+            Debug.Log("Trying to move to: " + newPosition.x + ", " + newPosition.z);
+
             if (CheckForWallCollision(newPosition))
             {
                 episodeDone = true;
@@ -150,12 +169,20 @@ public class MazeAgentSocket : MonoBehaviour
                 CheckGoal();
             }
         }
+
+        // Apply rotation
+        if (rotation != Vector3.zero)
+        {
+            Quaternion newRotation = Quaternion.Euler(transform.localEulerAngles + rotation);
+            Debug.Log("Rotating to: " + newRotation.eulerAngles);
+            transform.localRotation = newRotation;
+        }
     }
+
 
     private bool CheckForWallCollision(Vector3 position)
     {
-        // Use a small overlap box to check for any colliders with the "wall" tag
-        Collider[] colliders = Physics.OverlapBox(position, Vector3.one * 0.5f, Quaternion.identity);
+        Collider[] colliders = Physics.OverlapBox(position, Vector3.one * 0.25f, Quaternion.identity);
         foreach (var collider in colliders)
         {
             if (collider.CompareTag("wall")) return true;
