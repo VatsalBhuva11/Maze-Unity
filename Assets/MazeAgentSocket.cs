@@ -127,30 +127,33 @@ public class MazeAgentSocket : MonoBehaviour
     private void PerformAction(string action)
     {
         float moveStep = 1.0f; // Movement step size
-        float rotationStep = 90.0f; // Rotation angle in degrees
         Vector3 move = Vector3.zero;
-        Vector3 rotation = Vector3.zero;
+        Quaternion targetRotation = transform.localRotation;
 
         switch (action)
         {
-            case "0": break; // No action
+            case "0":
+                break; // No action
             case "1":
                 move = new Vector3(0, 0, -moveStep); // Move forward (negative z-axis)
-                rotation = new Vector3(0, -rotationStep, 0); // Rotate left (Y-axis)
+                targetRotation = Quaternion.Euler(0, 180, 0); // Face forward
                 break;
             case "2":
                 move = new Vector3(0, 0, moveStep); // Move backward (positive z-axis)
-                rotation = new Vector3(0, rotationStep, 0); // Rotate right (Y-axis)
+                targetRotation = Quaternion.Euler(0, 0, 0); // Face backward
                 break;
             case "3":
                 move = new Vector3(-moveStep, 0, 0); // Move left (negative x-axis)
-                rotation = new Vector3(-rotationStep, 0, 0); // Rotate down (X-axis)
+                targetRotation = Quaternion.Euler(0, 270, 0); // Face left
                 break;
             case "4":
                 move = new Vector3(moveStep, 0, 0); // Move right (positive x-axis)
-                rotation = new Vector3(rotationStep, 0, 0); // Rotate up (X-axis)
+                targetRotation = Quaternion.Euler(0, 90, 0); // Face right
                 break;
         }
+
+        // Apply rotation first to face the direction
+        transform.localRotation = targetRotation;
 
         // Apply movement
         if (move != Vector3.zero)
@@ -168,14 +171,6 @@ public class MazeAgentSocket : MonoBehaviour
                 transform.localPosition = newPosition;
                 CheckGoal();
             }
-        }
-
-        // Apply rotation
-        if (rotation != Vector3.zero)
-        {
-            Quaternion newRotation = Quaternion.Euler(transform.localEulerAngles + rotation);
-            Debug.Log("Rotating to: " + newRotation.eulerAngles);
-            transform.localRotation = newRotation;
         }
     }
 
