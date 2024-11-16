@@ -26,7 +26,7 @@ def run_training_loop(dqn_model, num_episodes, max_steps, batch_size, target_upd
                 # Send action to Unity and get new state and reward
                 s.sendall(f"{action}\n".encode())
                 next_state, done = dqn_model.receive_unity_data(s)
-                #print(f"State: {state}, Next State: {next_state}, Action: {action}")
+                print(f"State: {state}, Next State: {next_state}, Action: {action}")
                 
                 # Calculate reward internally
                 reward = dqn_model.calculate_reward(state, next_state, done)
@@ -131,10 +131,10 @@ class DQNModel:
         Receive data from Unity and interpret it.
         """
         data = socket_conn.recv(2048).decode().strip().split(',')
-        agent_x = int(float(data[0]))
-        agent_y = int(float(data[1]))
-        target_x = int(float(data[2]))
-        target_y = int(float(data[3]))
+        agent_x = round(float(data[0]))
+        agent_y = round(float(data[1]))
+        target_x = round(float(data[2]))
+        target_y = round(float(data[3]))
         
         state = (agent_x, agent_y)
         done = bool(int(float(data[4])))  # The done flag from Unity now reflects either goal or wall collision

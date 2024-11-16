@@ -115,12 +115,12 @@ public class MazeAgentSocket : MonoBehaviour
         Vector3 agentRelativePosition = transform.localPosition - origin;
         Vector3 targetRelativePosition = target.localPosition - origin;
 
-        float agentX = -agentRelativePosition.z;
-        float agentY = -agentRelativePosition.x;
-        float targetX = -targetRelativePosition.z;
-        float targetY = -targetRelativePosition.x;
+        float agentX = -agentRelativePosition.x;
+        float agentY = -agentRelativePosition.z;
+        float targetX = -targetRelativePosition.x;
+        float targetY = -targetRelativePosition.z;
         float done = episodeDone ? 1 : 0;
-
+        // Debug.Log($"collect obs: {agentX},{agentY},{targetX},{targetY}");
         return $"{agentX},{agentY},{targetX},{targetY},{done}";
     }
 
@@ -161,7 +161,7 @@ public class MazeAgentSocket : MonoBehaviour
             Vector3 newPosition = transform.localPosition + move;
             Debug.Log("Trying to move to: " + newPosition.x + ", " + newPosition.z);
 
-            if (CheckForWallCollision(newPosition))
+            if (CheckForWallCollision(transform.localPosition, newPosition))
             {
                 episodeDone = true;
                 Debug.Log("Agent hit a wall. Ending episode.");
@@ -175,13 +175,26 @@ public class MazeAgentSocket : MonoBehaviour
     }
 
 
-    private bool CheckForWallCollision(Vector3 position)
+    private bool CheckForWallCollision(Vector3 currentPosition, Vector3 newPosition)
     {
-        Collider[] colliders = Physics.OverlapBox(position, Vector3.one * 0.25f, Quaternion.identity);
-        foreach (var collider in colliders)
+        // Calculate the direction and distance between the two positions
+        Vector3 direction = (newPosition - currentPosition).normalized;
+        float distance = Vector3.Distance(currentPosition, newPosition);
+        currentPosition.y = 0.5f;
+        Debug.Log("direction: " + direction.x + ", " + direction.y + ", " + direction.z);
+        Debug.Log("distance: " + distance);
+        Debug.DrawRay(currentPosition, direction * distance, Color.red, 1.0f);
+        // Perform a raycast to detect collisions
+        if (Physics.Raycast(currentPosition, direction, out RaycastHit hit, distance))
         {
-            if (collider.CompareTag("wall")) return true;
+            // Check if the hit object is tagged as a wall
+            if (hit.collider.CompareTag("wall"))
+            {
+                Debug.Log($"Wall detected between the positions: (${currentPosition.x},${currentPosition.y},${currentPosition.z}) and (${newPosition.x},${newPosition.y},${newPosition.z})");
+                return true;
+            }
         }
+
         return false;
     }
 
@@ -189,6 +202,7 @@ public class MazeAgentSocket : MonoBehaviour
     {
         byte[] message = Encoding.ASCII.GetBytes(data + "\n");
         stream.Write(message, 0, message.Length);
+        Debug.Log("Sending msg: " + data);
     }
 
     private string ReceiveDataFromPython()

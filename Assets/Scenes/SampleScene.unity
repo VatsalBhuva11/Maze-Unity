@@ -17734,15 +17734,15 @@ PrefabInstance:
     - target: {fileID: 4885301371922852569, guid: 36078ab0369161e49a29d349ae3e0739, type: 3}
       propertyPath: m_Materials.Array.data[0]
       value: 
-      objectReference: {fileID: 2100000, guid: 40d67dbc232eed645bb6bc6728c65a82, type: 2}
+      objectReference: {fileID: 2100000, guid: 0c028ff5657c9904ab15da6f9cc31264, type: 2}
     - target: {fileID: 4885301371922852569, guid: 36078ab0369161e49a29d349ae3e0739, type: 3}
       propertyPath: m_Materials.Array.data[1]
       value: 
-      objectReference: {fileID: 2100000, guid: 40d67dbc232eed645bb6bc6728c65a82, type: 2}
+      objectReference: {fileID: 2100000, guid: 0c028ff5657c9904ab15da6f9cc31264, type: 2}
     - target: {fileID: 4885301371922852569, guid: 36078ab0369161e49a29d349ae3e0739, type: 3}
       propertyPath: m_Materials.Array.data[2]
       value: 
-      objectReference: {fileID: 2100000, guid: 40d67dbc232eed645bb6bc6728c65a82, type: 2}
+      objectReference: {fileID: 2100000, guid: 0c028ff5657c9904ab15da6f9cc31264, type: 2}
     - target: {fileID: 5866666021909216657, guid: 36078ab0369161e49a29d349ae3e0739, type: 3}
       propertyPath: m_Enabled
       value: 1
