@@ -7,6 +7,8 @@ TagManager:
   - target
   - start
   - wall
+  - CinemachineTarget
+  - agent
   layers:
   - Default
   - TransparentFX

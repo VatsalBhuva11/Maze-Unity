@@ -7,8 +7,9 @@ public class MazeAgentSocket : MonoBehaviour
 {
     private TcpClient client;
     private NetworkStream stream;
-    public Transform target;
-    public Transform start;
+    public Vector3 target;
+    public Vector3 start;
+    private Vector3 agentCenter;
     private TcpListener server;
     public float moveSpeed = 1f;
 
@@ -16,31 +17,72 @@ public class MazeAgentSocket : MonoBehaviour
     private Vector3 initialTargetPosition;
     private bool episodeDone = false;
     private int steps = 0;
-    private Vector3 origin = new Vector3(4.5144f, 0f, -10.581f);
+    private Vector3 origin = new Vector3(0f, 0f, 0f);
 
     private void Start()
     {
         GameObject targetObject = GameObject.FindGameObjectWithTag("target");
         GameObject startObject = GameObject.FindGameObjectWithTag("start");
+        GameObject agentObject = gameObject;
         episodeDone = false;
         Time.timeScale = 0.5f;
 
-        if (targetObject != null) target = targetObject.transform;
+        if (targetObject != null)
+        {
+            BoxCollider boxCollider = targetObject.GetComponent<BoxCollider>();
+            if (boxCollider != null)
+            {
+                // Get the world position of the center of the Box 
+                target = boxCollider.bounds.center;
+            }
+            else
+            {
+                Debug.LogError("TargetObject does not have a BoxCollider component.");
+            }
+        }
         else
         {
-            Debug.LogError("Target GameObject with tag 'target' not found.");
-            return;
+            Debug.LogError("TargetObject is null.");
         }
 
-        if (startObject != null) start = startObject.transform;
+        if (startObject != null)
+        {
+            BoxCollider boxCollider = startObject.GetComponent<BoxCollider>();
+            if (boxCollider != null)
+            {
+                // Get the world position of the center of the Box 
+                start = boxCollider.bounds.center;
+            }
+            else
+            {
+                Debug.LogError("startObject does not have a BoxCollider component.");
+            }
+        }
         else
         {
-            Debug.LogError("Start GameObject with tag 'start' not found.");
-            return;
+            Debug.LogError("startObject is null.");
         }
 
-        initialAgentPosition = start.position;
-        initialTargetPosition = target.position;
+        if (agentObject != null)
+        {
+            BoxCollider boxCollider = agentObject.GetComponent<BoxCollider>();
+            if (boxCollider != null)
+            {
+                // Get the world position of the center of the Box 
+                agentCenter = boxCollider.bounds.center;
+            }
+            else
+            {
+                Debug.LogError("agentObject does not have a BoxCollider component.");
+            }
+        }
+        else
+        {
+            Debug.LogError("agentObject is null.");
+        }
+
+        initialAgentPosition = start;
+        initialTargetPosition = target;
         StartServer();
     }
 
@@ -112,15 +154,15 @@ public class MazeAgentSocket : MonoBehaviour
 
     private string CollectObservations()
     {
-        Vector3 agentRelativePosition = transform.localPosition - origin;
-        Vector3 targetRelativePosition = target.localPosition - origin;
+        Vector3 agentRelativePosition = agentCenter - origin;
+        Vector3 targetRelativePosition = target - origin;
 
-        float agentX = -agentRelativePosition.x;
-        float agentY = -agentRelativePosition.z;
-        float targetX = -targetRelativePosition.x;
-        float targetY = -targetRelativePosition.z;
+        float agentX = agentRelativePosition.x;
+        float agentY = agentRelativePosition.z;
+        float targetX = targetRelativePosition.x;
+        float targetY = targetRelativePosition.z;
         float done = episodeDone ? 1 : 0;
-        // Debug.Log($"collect obs: {agentX},{agentY},{targetX},{targetY}");
+        Debug.Log($"collect obs: {agentX},{agentY},{targetX},{targetY}");
         return $"{agentX},{agentY},{targetX},{targetY},{done}";
     }
 
@@ -135,20 +177,20 @@ public class MazeAgentSocket : MonoBehaviour
             case "0":
                 break; // No action
             case "1":
-                move = new Vector3(0, 0, -moveStep); // Move forward (negative z-axis)
-                targetRotation = Quaternion.Euler(0, 180, 0); // Face forward
+                move = new Vector3(-moveStep, 0, 0); // Move up (-ve x)
+                targetRotation = Quaternion.Euler(0, 180, 0);
                 break;
             case "2":
-                move = new Vector3(0, 0, moveStep); // Move backward (positive z-axis)
-                targetRotation = Quaternion.Euler(0, 0, 0); // Face backward
+                move = new Vector3(0, 0, moveStep); // Move right (+ve z)
+                targetRotation = Quaternion.Euler(0, 0, 0);
                 break;
             case "3":
-                move = new Vector3(-moveStep, 0, 0); // Move left (negative x-axis)
-                targetRotation = Quaternion.Euler(0, 270, 0); // Face left
+                move = new Vector3(moveStep, 0, 0); // Move down (+ve x)
+                targetRotation = Quaternion.Euler(0, 270, 0);
                 break;
             case "4":
-                move = new Vector3(moveStep, 0, 0); // Move right (positive x-axis)
-                targetRotation = Quaternion.Euler(0, 90, 0); // Face right
+                move = new Vector3(0, 0, -moveStep); // Move left (-ve z)
+                targetRotation = Quaternion.Euler(0, 90, 0);
                 break;
         }
 
@@ -158,18 +200,19 @@ public class MazeAgentSocket : MonoBehaviour
         // Apply movement
         if (move != Vector3.zero)
         {
-            Vector3 newPosition = transform.localPosition + move;
+            Vector3 newPosition = transform.position + move;
             Debug.Log("Trying to move to: " + newPosition.x + ", " + newPosition.z);
 
-            if (CheckForWallCollision(transform.localPosition, newPosition))
+            if (CheckForWallCollision(agentCenter, agentCenter + move))
             {
                 episodeDone = true;
                 Debug.Log("Agent hit a wall. Ending episode.");
             }
             else
             {
-                transform.localPosition = newPosition;
-                CheckGoal();
+                agentCenter = agentCenter + move;
+                transform.position = newPosition;
+                CheckGoal(agentCenter);
             }
         }
     }
@@ -178,15 +221,19 @@ public class MazeAgentSocket : MonoBehaviour
     private bool CheckForWallCollision(Vector3 currentPosition, Vector3 newPosition)
     {
         // Calculate the direction and distance between the two positions
-        Vector3 direction = (newPosition - currentPosition).normalized;
+        Vector3 direction = newPosition - currentPosition;
         float distance = Vector3.Distance(currentPosition, newPosition);
-        currentPosition.y = 0.5f;
+        //currentPosition.y = 0.5f;
         Debug.Log("direction: " + direction.x + ", " + direction.y + ", " + direction.z);
         Debug.Log("distance: " + distance);
-        Debug.DrawRay(currentPosition, direction * distance, Color.red, 1.0f);
+        Debug.DrawRay(currentPosition, direction * distance, Color.red, 5.0f);
+
         // Perform a raycast to detect collisions
         if (Physics.Raycast(currentPosition, direction, out RaycastHit hit, distance))
         {
+            Debug.Log("Raycast direction: " + direction);
+            Debug.Log("Raycast hit: " + (hit.collider != null ? hit.collider.name : "none"));
+
             // Check if the hit object is tagged as a wall
             if (hit.collider.CompareTag("wall"))
             {
@@ -215,15 +262,17 @@ public class MazeAgentSocket : MonoBehaviour
     private void ResetPositions()
     {
         transform.position = initialAgentPosition;
-        target.position = initialTargetPosition;
+        agentCenter = transform.position;
+        agentCenter.y = 0;
+        target = initialTargetPosition;
         Debug.Log("Environment reset to initial positions.");
         episodeDone = false;
     }
 
-    private void CheckGoal()
+    private void CheckGoal(Vector3 newPosition)
     {
-        float distanceToTarget = Vector3.Distance(transform.localPosition, target.localPosition);
-        if (distanceToTarget < 0.75f)
+        float distanceToTarget = Vector3.Distance(transform.position, target);
+        if (distanceToTarget < 0.1f)
         {
             episodeDone = true;
             Debug.Log("Agent reached the target.");

@@ -26,7 +26,7 @@ def run_training_loop(dqn_model, num_episodes, max_steps, batch_size, target_upd
                 # Send action to Unity and get new state and reward
                 s.sendall(f"{action}\n".encode())
                 next_state, done = dqn_model.receive_unity_data(s)
-                print(f"State: {state}, Next State: {next_state}, Action: {action}")
+                # print(f"State: {state}, Next State: {next_state}, Action: {action}")
                 
                 # Calculate reward internally
                 reward = dqn_model.calculate_reward(state, next_state, done)
@@ -123,18 +123,19 @@ class DQNModel:
         """
         if done:
             # If the agent reached the goal, reward it; if it hit a wall, penalize it.
-            return 10 if next_state == self.maze.destination else -10  # Penalize wall collision
-        return -0.1  # Small step penalty to encourage efficient pathfinding
+            return 10 if next_state == self.maze.destination else -7.5  # Penalize wall collision
+
+        return 0  # Small step penalty to encourage efficient pathfinding
 
     def receive_unity_data(self, socket_conn):
         """
         Receive data from Unity and interpret it.
         """
         data = socket_conn.recv(2048).decode().strip().split(',')
-        agent_x = round(float(data[0]))
-        agent_y = round(float(data[1]))
-        target_x = round(float(data[2]))
-        target_y = round(float(data[3]))
+        agent_x = (int(data[0]))
+        agent_y = (int(data[1]))
+        target_x =(int(data[2]))
+        target_y =(int(data[3]))
         
         state = (agent_x, agent_y)
         done = bool(int(float(data[4])))  # The done flag from Unity now reflects either goal or wall collision
@@ -203,17 +204,18 @@ class DQNModel:
 
 class Maze:
     def __init__(self):
-        self.maze = [
-            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-            [1, 1, 0, 0, 0, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 1, 0, 1, 0, 1],
-            [1, 0, 0, 0, 0, 0, 1, 0, 1, 1],
-            [1, 0, 1, 0, 0, 1, 1, 0, 0, 1],
-            [1, 0, 1, 0, 0, 0, 0, 0, 1, 1],
-            [1, 1, 0, 0, 1, 0, 1, 0, 1, 1],
-            [1, 0, 0, 1, 0, 1, 0, 0, 0, 1],
-            [1, 1, 0, 0, 0, 1, 0, 1, 0, 1],
-        ]
+        # self.maze = [
+        #     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        #     [1, 1, 0, 0, 0, 0, 0, 0, 0, 1],
+        #     [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+        #     [1, 0, 0, 0, 0, 0, 1, 0, 1, 1],
+        #     [1, 0, 1, 0, 0, 1, 1, 0, 0, 1],
+        #     [1, 0, 1, 0, 0, 0, 0, 0, 1, 1],
+        #     [1, 1, 0, 0, 0, 0, 0, 0, 1, 1],
+        #     [1, 0, 0, 1, 0, 1, 0, 0, 0, 1],
+        #     [1, 1, 0, 0, 0, 1, 0, 1, 0, 1],
+        #     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        # ]
         self.maze_size = 10
         self.destination = (8, 8)  # Adjust based on your Unity setup
 
