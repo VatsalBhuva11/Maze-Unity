@@ -15,6 +15,7 @@ public class AgentSocket : MonoBehaviour
     private Vector3 initialAgentPosition;
     private Vector3 initialTargetPosition;
     private bool episodeDone = false;
+    private int episodeCount = 0;
     private int steps = 0;
     private Vector3 origin = new Vector3(0f, 0f, 0f);
 
@@ -23,7 +24,7 @@ public class AgentSocket : MonoBehaviour
         GameObject targetObject = GameObject.FindGameObjectWithTag("target");
         GameObject startObject = GameObject.FindGameObjectWithTag("start");
         episodeDone = false;
-        Time.timeScale = 0.5f;
+        Time.timeScale = 10f;
 
         if (targetObject != null) target = targetObject.transform;
         else
@@ -110,8 +111,8 @@ public class AgentSocket : MonoBehaviour
     {
         if (stream != null && stream.CanRead && stream.CanWrite)
         {
-            string observations = CollectObservations();
-            SendDataToPython(observations);
+            Vector3 newPosition = transform.position;
+
 
             string action = ReceiveDataFromPython();
             if (!string.IsNullOrEmpty(action))
@@ -120,20 +121,32 @@ public class AgentSocket : MonoBehaviour
                 if (action == "RESET")
                 {
                     ResetPositions();
+                    string initialPos = CollectObservations();
+                    SendDataToPython(initialPos);
+                    return;
                 }
-                else
-                {
-                    PerformAction(action);
-                }
+                
+                newPosition = PerformAction(action);
+                
             }
-
+            /*
+            float temp = episodeDone == true ? 1f : 0f;
+            string temp2 = $"{(float)newPosition.x},{(float)newPosition.z},{(float)target.position.x},{(float)target.position.z},{temp}";
+            SendDataToPython(temp2);
+            */
+            string observations = CollectObservations();
+            SendDataToPython(observations);
+            
             steps++;
             if (steps >= 200 || episodeDone)
             {
+                episodeCount++;
+                Debug.Log($"Episode {episodeCount} done: {steps} {episodeDone}");
                 ResetPositions();
                 steps = 0;
                 episodeDone = false;
             }
+
         }
     }
 
@@ -153,7 +166,7 @@ public class AgentSocket : MonoBehaviour
         return $"{agentX},{agentY},{targetX},{targetY},{done}";
     }
 
-    private void PerformAction(string action)
+    private Vector3 PerformAction(string action)
     {
         float moveStep = 1.0f; // Movement step size
         Vector3 move = Vector3.zero;
@@ -183,11 +196,11 @@ public class AgentSocket : MonoBehaviour
 
         // Apply rotation first to face the direction
         transform.localRotation = targetRotation;
-
+        Vector3 newPosition = new Vector3();
         // Apply movement
         if (move != Vector3.zero)
         {
-            Vector3 newPosition = transform.localPosition + move;
+            newPosition = transform.localPosition + move;
             Debug.Log("Trying to move to: " + newPosition.x + ", " + newPosition.z);
 
             if (CheckForWallCollision(transform.localPosition, newPosition))
@@ -201,6 +214,7 @@ public class AgentSocket : MonoBehaviour
                 CheckGoal();
             }
         }
+        return newPosition;
     }
     private bool CheckForWallCollision(Vector3 currentPosition, Vector3 newPosition)
     {
@@ -219,7 +233,7 @@ public class AgentSocket : MonoBehaviour
             // Check if the hit object is tagged as a wall
             if (hit.collider.CompareTag("wall"))
             {
-                Debug.Log($"Wall detected between the positions: (${currentPosition.x},${currentPosition.y},${currentPosition.z}) and (${newPosition.x},${newPosition.y},${newPosition.z})");
+                Debug.Log("Wall detected!");
                 return true;
             }
         }
