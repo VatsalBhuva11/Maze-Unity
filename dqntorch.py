@@ -13,11 +13,11 @@ def run_training_loop(dqn_model, num_episodes, max_steps, batch_size, target_upd
     # Connect to Unity socket
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.connect(("127.0.0.1", 4657))
-        
+        print("socket connected.")
         for episode in range(num_episodes):
             state = dqn_model.reset_environment(s)  # Reset environment within the model
             total_reward = 0
-            print("Chal raha hai")
+            print(f"Episode: {episode}")
 
             for step in range(max_steps):
                 # Select action based on the current state
@@ -26,7 +26,8 @@ def run_training_loop(dqn_model, num_episodes, max_steps, batch_size, target_upd
                 # Send action to Unity and get new state and reward
                 s.sendall(f"{action}\n".encode())
                 next_state, done = dqn_model.receive_unity_data(s)
-                # print(f"State: {state}, Next State: {next_state}, Action: {action}")
+                print(f"Steps: {step+1}, State: {state}, Next State: {next_state}, Action: {action}")
+                # print(f"Steps: {step+1}, Done state: {done}")
                 
                 # Calculate reward internally
                 reward = dqn_model.calculate_reward(state, next_state, done)
@@ -44,7 +45,7 @@ def run_training_loop(dqn_model, num_episodes, max_steps, batch_size, target_upd
 
                 # Check if the episode is done
                 if done:
-                    print(f"Episode {episode} over. State: {state}")
+                    print(f"------- Episode {episode} over. State: {state}, Steps: {step+1} -------")
                     break
 
             # Update target network at fixed intervals
@@ -54,7 +55,7 @@ def run_training_loop(dqn_model, num_episodes, max_steps, batch_size, target_upd
             # Decay epsilon after each episode
             dqn_model.epsilon = max(dqn_model.epsilon * dqn_model.epsilon_decay, dqn_model.epsilon_min)
             total_rewards.append(total_reward)
-            print(f"Episode {episode + 1}: Total Reward: {total_reward}")
+            print(f"Episode {episode}: Total Reward: {total_reward}")
             s.sendall("\n".encode())
 
         return total_rewards
@@ -108,6 +109,7 @@ class DQNModel:
         self.update_target_network()
         self.loss_fn = nn.MSELoss()
         self.optimizer = torch.optim.Adam(self.main_network.parameters(), lr=self.alpha)
+        self.visited_states = []
 
     def reset_environment(self, socket_conn):
         """Reset Unity environment and get the initial state."""
@@ -121,24 +123,59 @@ class DQNModel:
         Calculate reward based on state transitions.
         Penalizes collisions with walls, rewards reaching the goal, and adds a small step penalty.
         """
+        
         if done:
-            # If the agent reached the goal, reward it; if it hit a wall, penalize it.
-            return 10 if next_state == self.maze.destination else -7.5  # Penalize wall collision
+            # final destination
+            if next_state==self.maze.destination:
+                print("destination reached!")
+                return 5
+            # wall coillsion
+            else:
+                return -0.75
+        else:
+            #valid one step
+            reward = 0.05
+            if next_state not in self.visited_states:
+                reward += 0.05
+                self.visited_states.append(next_state)
+            else :
+                reward -= 0.07
+            state_arr = np.array(state)
+            next_state_arr = np.array(next_state)
+            destination = np.array((8,8))
+            current_dist = np.linalg.norm(destination - state_arr)
+            prev_dist = np.linalg.norm(destination - next_state_arr)
+            if current_dist<=prev_dist:
+                reward+=0.05
+            else:
+                reward-=0.10
+            return reward
+                
+            
+        # if done:
+        #     # If the agent reached the goal, reward it; if it hit a wall, penalize it.
+        #     return 10 if next_state == self.maze.destination else -7.5  # Penalize wall collision
 
-        return 0  # Small step penalty to encourage efficient pathfinding
+        # return 0  # Small step penalty to encourage efficient pathfinding
 
     def receive_unity_data(self, socket_conn):
         """
         Receive data from Unity and interpret it.
         """
         data = socket_conn.recv(2048).decode().strip().split(',')
-        agent_x = (int(data[0]))
-        agent_y = (int(data[1]))
-        target_x =(int(data[2]))
-        target_y =(int(data[3]))
+        try:
+            agent_x = (int(data[0]))
+            agent_y = (int(data[1]))
+            target_x =(int(data[2]))
+            target_y =(int(data[3]))
+            # print(f"Received data: {data}")
         
-        state = (agent_x, agent_y)
-        done = bool(int(float(data[4])))  # The done flag from Unity now reflects either goal or wall collision
+            state = (agent_x, agent_y)
+            done = bool(int(float(data[4])))
+        except (ValueError, IndexError) as e:
+            print(f"Error parsing data: {e}")
+            print(f"Received data while error occured: {data}")
+            raise# The done flag from Unity now reflects either goal or wall collision
         return state, done
     
     def remember(self, state, action, reward, next_state, done):
@@ -172,7 +209,8 @@ class DQNModel:
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-        return loss
+        return loss # Return TD errors for further inspection or logging
+
 
     # def encode_state(self, state):
     #     """Encodes the state to a one-hot tensor representation."""
@@ -204,18 +242,18 @@ class DQNModel:
 
 class Maze:
     def __init__(self):
-        # self.maze = [
-        #     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        #     [1, 1, 0, 0, 0, 0, 0, 0, 0, 1],
-        #     [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-        #     [1, 0, 0, 0, 0, 0, 1, 0, 1, 1],
-        #     [1, 0, 1, 0, 0, 1, 1, 0, 0, 1],
-        #     [1, 0, 1, 0, 0, 0, 0, 0, 1, 1],
-        #     [1, 1, 0, 0, 0, 0, 0, 0, 1, 1],
-        #     [1, 0, 0, 1, 0, 1, 0, 0, 0, 1],
-        #     [1, 1, 0, 0, 0, 1, 0, 1, 0, 1],
-        #     [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-        # ]
+        self.maze = [
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 1, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 1, 0, 1, 1],
+            [1, 0, 1, 0, 0, 1, 1, 0, 0, 1],
+            [1, 0, 1, 0, 0, 0, 0, 0, 1, 1],
+            [1, 1, 0, 0, 0, 0, 0, 0, 1, 1],
+            [1, 0, 0, 1, 0, 1, 0, 0, 0, 1],
+            [1, 1, 0, 0, 0, 1, 0, 1, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        ]
         self.maze_size = 10
         self.destination = (8, 8)  # Adjust based on your Unity setup
 
@@ -224,6 +262,7 @@ if __name__ == "__main__":
     state_size = 100
     action_size = 5
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(device)
     maze = Maze()
     dqn_model = DQNModel(state_size, action_size, maze, device)
     num_episodes = 1000
