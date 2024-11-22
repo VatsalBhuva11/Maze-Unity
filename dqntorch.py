@@ -17,7 +17,7 @@ def run_training_loop(dqn_model, num_episodes, max_steps, batch_size, target_upd
         for episode in range(num_episodes):
             state = dqn_model.reset_environment(s)  # Reset environment within the model
             total_reward = 0
-            print(f"Episode: {episode}")
+            print(f"Episode: {episode}, Start State: {state}")
 
             for step in range(max_steps):
                 # Select action based on the current state
@@ -45,7 +45,7 @@ def run_training_loop(dqn_model, num_episodes, max_steps, batch_size, target_upd
 
                 # Check if the episode is done
                 if done:
-                    print(f"------- Episode {episode} over. State: {state}, Steps: {step+1} -------")
+                    print(f"------- Episode {episode} over. Final State: {state}, Steps: {step+1} -------")
                     break
 
             # Update target network at fixed intervals
@@ -127,7 +127,7 @@ class DQNModel:
         if done:
             # final destination
             if next_state==self.maze.destination:
-                print("destination reached!")
+                print("Destination reached!")
                 return 5
             # wall coillsion
             else:
