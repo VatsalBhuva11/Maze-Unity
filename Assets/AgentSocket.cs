@@ -111,8 +111,6 @@ public class AgentSocket : MonoBehaviour
     {
         if (stream != null && stream.CanRead && stream.CanWrite)
         {
-            Vector3 newPosition = transform.position;
-
 
             string action = ReceiveDataFromPython();
             if (!string.IsNullOrEmpty(action))
@@ -126,14 +124,10 @@ public class AgentSocket : MonoBehaviour
                     return;
                 }
                 
-                newPosition = PerformAction(action);
+                PerformAction(action);
                 
             }
-            /*
-            float temp = episodeDone == true ? 1f : 0f;
-            string temp2 = $"{(float)newPosition.x},{(float)newPosition.z},{(float)target.position.x},{(float)target.position.z},{temp}";
-            SendDataToPython(temp2);
-            */
+
             string observations = CollectObservations();
             SendDataToPython(observations);
             
@@ -141,7 +135,7 @@ public class AgentSocket : MonoBehaviour
             if (steps >= 200 || episodeDone)
             {
                 episodeCount++;
-                Debug.Log($"Episode {episodeCount} done: {steps} {episodeDone}");
+                Debug.Log($"----- Episode {episodeCount} done: {steps} {episodeDone} -----");
                 ResetPositions();
                 steps = 0;
                 episodeDone = false;
@@ -166,7 +160,7 @@ public class AgentSocket : MonoBehaviour
         return $"{agentX},{agentY},{targetX},{targetY},{done}";
     }
 
-    private Vector3 PerformAction(string action)
+    private void PerformAction(string action)
     {
         float moveStep = 1.0f; // Movement step size
         Vector3 move = Vector3.zero;
@@ -196,7 +190,7 @@ public class AgentSocket : MonoBehaviour
 
         // Apply rotation first to face the direction
         transform.localRotation = targetRotation;
-        Vector3 newPosition = new Vector3();
+        Vector3 newPosition;
         // Apply movement
         if (move != Vector3.zero)
         {
@@ -214,7 +208,6 @@ public class AgentSocket : MonoBehaviour
                 CheckGoal();
             }
         }
-        return newPosition;
     }
     private bool CheckForWallCollision(Vector3 currentPosition, Vector3 newPosition)
     {
