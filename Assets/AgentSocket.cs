@@ -135,7 +135,7 @@ public class AgentSocket : MonoBehaviour
             if (steps >= 200 || episodeDone)
             {
                 episodeCount++;
-                Debug.Log($"----- Episode {episodeCount} done: {steps} {episodeDone} -----");
+                Debug.Log($"----- Episode {episodeCount}, Steps: {steps}, Done: {episodeDone} -----");
                 ResetPositions();
                 steps = 0;
                 episodeDone = false;
@@ -195,7 +195,7 @@ public class AgentSocket : MonoBehaviour
         if (move != Vector3.zero)
         {
             newPosition = transform.localPosition + move;
-            Debug.Log("Trying to move to: " + newPosition.x + ", " + newPosition.z);
+            Debug.Log($"Trying to move to: ({newPosition.x},{newPosition.z}");
 
             if (CheckForWallCollision(transform.localPosition, newPosition))
             {
@@ -216,7 +216,7 @@ public class AgentSocket : MonoBehaviour
         float distance = Vector3.Distance(currentPosition, newPosition);
         currentPosition.y = 0.5f;
         newPosition.y = 0.5f;
-        Debug.Log($"Checking between: ({currentPosition.x},{currentPosition.y},{currentPosition.z}) and ({newPosition.x},{newPosition.y},{newPosition.z})");
+        Debug.Log($"Checking wall between: ({currentPosition.x},{currentPosition.y},{currentPosition.z}) and ({newPosition.x},{newPosition.y},{newPosition.z})");
         // Debug.Log("direction: " + direction.x + ", " + direction.y + ", " + direction.z);
         // Debug.Log("distance: " + distance);
         Debug.DrawRay(currentPosition, direction * distance, Color.red, 1.0f);
@@ -264,7 +264,7 @@ public class AgentSocket : MonoBehaviour
     {
         byte[] message = Encoding.ASCII.GetBytes(data + "\n");
         stream.Write(message, 0, message.Length);
-        Debug.Log("Sending msg: " + data);
+        Debug.Log("Sending message: " + data);
     }
 
     private string ReceiveDataFromPython()
